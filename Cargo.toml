@@ -1,0 +1,2 @@
+[workspace]
+members = ["dioxus_file_picker", "example"]

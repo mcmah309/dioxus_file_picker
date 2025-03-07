@@ -1,0 +1,55 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+{
+	"name": "dioxus",
+	"image": "dioxus",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				// general tools
+				"chunsen.bracket-select",
+				"dzhavat.bracket-pair-toggler",
+				"oderwat.indent-rainbow",
+				"fabiospampinato.vscode-git-history",
+				"streetsidesoftware.code-spell-checker",
+				"rebornix.toggle", // used in settings.json to add a toggle for inlay hints in rust - `ctrl+q`
+				"ryuta46.multi-command", // used in settings.json to add custom command combinators
+				
+				// rust
+				"fill-labs.dependi", // dependency validation in Cargo.toml
+				"tamasfe.even-better-toml", // toml lsp
+				"redhat.vscode-yaml", // yaml lsp
+				"rust-lang.rust-analyzer", // rust lsp
+				"vadimcn.vscode-lldb", // rust debugger
+				
+				
+				
+				
+				// web
+				"ecmel.vscode-html-css", // html/css support
+				"bradlc.vscode-tailwindcss", // tailwind css support
+				"jock.svg", // svg language support
+				"vincaslt.highlight-matching-tag", // highlights matching html tags
+				"pranaygp.vscode-css-peek", // Go to definition for css
+				"ms-vscode.live-server", // live preview of html
+				
+				
+				// sh
+				"timonwong.shellcheck", // sh lsp
+				
+			]
+		}
+	},
+	"mounts": [
+		// ssh
+		"source=/home/henry/.ssh/,target=/root/.ssh,type=bind",
+		
+		// usb. When plugging in a previously plugged in android device, you may need to run `adb kill-server` to recognize it again.
+		"source=/dev/bus/usb,target=/dev/bus/usb,type=bind",
+		
+	],
+	"runArgs": [
+		"--privileged",
+		"--net=host",
+	],
+	"remoteUser": "root",
+}
