@@ -10,7 +10,7 @@ use dioxus::{
 };
 
 #[component]
-pub fn FilePicker(multiple: bool, on_submit: Callback<HashSet<PathBuf>, ()>) -> Element {
+pub(crate) fn NativeFilePicker(multiple: bool, on_submit: Callback<HashSet<PathBuf>, ()>) -> Element {
     let mut explorer = use_signal(FilesExplorerState::new);
     let reader = explorer.read();
     rsx! {

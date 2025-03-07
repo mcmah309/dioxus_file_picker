@@ -1,6 +1,6 @@
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
-use dioxus::{logger::tracing::Level, prelude::*};
+use dioxus::{html::FileEngine, logger::tracing::Level, prelude::*};
 use dioxus_file_picker::FilePicker;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
@@ -16,11 +16,13 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         FilePicker {
             multiple: false,
-            on_submit: move |paths: HashSet<PathBuf>| {
+            directory: true,
+            on_submit: move |(file_engine, paths): (Arc<dyn FileEngine>, HashSet<PathBuf>)| {
                 debug_assert!(paths.len() == 1);
                 let path = paths.iter().next().unwrap();
                 dioxus::logger::tracing::error!("Selected file: {:?}", path);
             },
+            "click me"
         }
     }
 }
