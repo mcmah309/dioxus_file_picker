@@ -1,0 +1,32 @@
+.fse {
+    float: left;
+    width: 100px;
+    height: 150px;
+    margin-right: 50px;
+    margin-bottom: 70px;
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: pointer;
+}
+.fse:hover {
+    overflow: visible;
+}
+.fse * {
+    text-align: center;
+}
+.fse i {
+    margin: 0;
+    font-size: 100px;
+    color: #607D8B;
+}
+.fse:hover {
+    opacity: 0.85;
+}
+
+.material-icons:not(.deactivated):hover {
+    opacity: 0.85;
+}
+
+.deactivated {
+    color: gray;
+}

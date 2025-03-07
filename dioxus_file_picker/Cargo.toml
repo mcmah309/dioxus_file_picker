@@ -1,8 +1,10 @@
 [package]
 name = "dioxus_file_picker"
+description = "A file picker for dioxus"
 version = "0.1.0"
 authors = ["mcmah309 <dillonmcmahon79@gmail.com>"]
-edition = "2021"
+edition = "2024"
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

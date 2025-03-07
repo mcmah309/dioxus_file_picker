@@ -1,8 +1,5 @@
 use dioxus::prelude::*;
 
-#[component]
-fn FilePicker() -> Element {
-    rsx! {
+mod fallback_file_picker;
 
-    }
-}
+pub use fallback_file_picker::FilePicker;
