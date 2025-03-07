@@ -1,21 +1,21 @@
 use std::{
     collections::HashSet,
     env, fs, mem,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, sync::Arc,
 };
 
 use dioxus::{
-    logger::tracing::error,
-    prelude::*,
+    html::FileEngine, logger::tracing::error, prelude::*
 };
 
+/// A file picker component that works on desktop and mobile.
 #[component]
-pub(crate) fn NativeFilePicker(multiple: bool, on_submit: Callback<HashSet<PathBuf>, ()>) -> Element {
+pub(crate) fn CrossPlatformFilePicker(multiple: bool, on_submit: Callback<(Arc<dyn FileEngine>, HashSet<PathBuf>), ()>) -> Element {
     let mut explorer = use_signal(FilesExplorerState::new);
     let reader = explorer.read();
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("/assets/tailwind.css") }
-        document::Link { rel: "stylesheet", href: asset!("/assets/fallback_file_picker.css") }
+        document::Link { rel: "stylesheet", href: asset!("/assets/integrated_file_picker.css") }
         document::Link {
             href: "https://fonts.googleapis.com/icon?family=Material+Icons",
             rel: "stylesheet",
@@ -152,7 +152,7 @@ pub(crate) fn NativeFilePicker(multiple: bool, on_submit: Callback<HashSet<PathB
                             let mut writer = explorer.write();
                             let selection = mem::take(&mut writer.selection);
                             writer.is_selecting = false;
-                            on_submit.call(selection);
+                            // on_submit.call(selection);
                         },
                         "Submit"
                     }
