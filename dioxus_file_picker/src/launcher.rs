@@ -20,12 +20,12 @@ use rfd::FileDialog;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Blob, File};
 
-use crate::cross_platform;
+use crate::{Overlay, file_picker};
 
 #[component]
 pub fn FilePickerLauncher(
     /// If true, on desktop will launch a native file picker.
-    desktop_native: bool, // todo
+    desktop_native: bool,
     /// If true, on desktop will launch in a new window. This is treated as true if `desktop_native` is true.
     desktop_windowed: bool,
     /// If true, on mobile will launch a native file picker.
@@ -36,9 +36,9 @@ pub fn FilePickerLauncher(
     // directory: bool, // todo
     /// File extensions to accept
     // accept: Vec<String>, // todo
-    on_submit: Callback<(Arc<dyn FileEngine>, HashSet<PathBuf>), ()>,
-    /// The path to open the directory at. If null, defaults to current directory. Has no effect on web.
-    open_directory_path: Option<PathBuf>,
+    on_submit: Callback<HashSet<PathBuf>, ()>,
+    /// The path to open the file picker at. If null, defaults to current directory. Has no effect on web.
+    open_at: Option<PathBuf>,
     children: Element,
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -58,7 +58,7 @@ pub fn FilePickerLauncher(
                         for file_name in file_names {
                             paths.insert(PathBuf::from(file_name));
                         }
-                        on_submit.call((file_engine.clone(), paths));
+                        on_submit.call(paths);
                     }
                 },
             }
@@ -89,30 +89,18 @@ pub fn FilePickerLauncher(
         target_os = "openbsd"
     ))]
     {
-        let launch_cross_platform_file_picker = move |_| {
-            if desktop_native || desktop_windowed {
-                let dom = VirtualDom::new_with_props(
-                    cross_platform::CrossPlatformFilePicker,
-                    cross_platform::CrossPlatformFilePickerProps {
-                        multiple,
-                        on_submit,
-                    },
-                );
-                dioxus::desktop::window().new_window(dom, Default::default());
-            }
-            let rsx = rsx! {
-                cross_platform::CrossPlatformFilePicker { multiple, on_submit } // todo bootstrap the on_submit to go back
-            };
-            Vec::new()
-        };
-        if desktop_native {
-            let on_click = move |event| {
-                let path_clone = open_directory_path.clone();
-                let path = path_clone.unwrap_or_else(|| {
-                    env::current_dir().expect("Failed to get current directory")
-                });
+        let mut overlay_active = use_signal(|| false);
+        let on_submit = use_callback(move |paths: HashSet<PathBuf>| {
+            on_submit.call(paths);
+            overlay_active.set(false);
+        });
+        let on_click = move |_event| {
+            let path_clone = open_at.clone();
+            let path = path_clone
+                .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
+            if desktop_native {
                 let start_time = time::Instant::now();
-                let mut files;
+                let files;
                 if multiple {
                     files = rfd::FileDialog::new()
                         .set_directory(&path)
@@ -132,35 +120,74 @@ pub fn FilePickerLauncher(
                     warn!(
                         "Native file dialog closed too quickly. This was likely an error. Launching a dioxus file dialog instead"
                     );
-                    files = launch_cross_platform_file_picker(event);
+                    let dom = VirtualDom::new_with_props(
+                        file_picker::FilePicker,
+                        file_picker::FilePickerProps {
+                            multiple,
+                            open_at: None,
+                            on_submit,
+                        },
+                    );
+                    dioxus::desktop::window().new_window(dom, Default::default());
+                } else {
+                    on_submit.call(files.into_iter().collect());
                 }
-                // todo
-            };
-            return rsx! {
-                input {
-                    name: "textreader",
-                    r#type: "file",
-                    multiple,
-                    accept: ".txt,.rs",
-                }
-                div { onclick: on_click, {children} }
-            };
-        } else {
-            return rsx! {
-                div {
-                    onclick: move |event| {
-                        let files = launch_cross_platform_file_picker(event);
+            } else if desktop_windowed {
+                let dom = VirtualDom::new_with_props(
+                    file_picker::FilePicker,
+                    file_picker::FilePickerProps {
+                        multiple,
+                        open_at: None,
+                        on_submit,
                     },
-                    {children}
+                );
+                dioxus::desktop::window().new_window(dom, Default::default());
+            } else {
+                overlay_active.set(true);
+            }
+        };
+        return rsx! {
+            div { onclick: on_click,
+                {children}
+            }
+            if *overlay_active.read() {
+                Overlay {
+                    file_picker::FilePicker { multiple, on_submit }
                 }
-            };
-        }
+            }
+        };
     }
-    rsx! {
-        div {
-            onclick: move |_| {
-                let nav = use_navigator();
+    #[cfg(not(any(
+        target_arch = "wasm32",
+        //
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )))]
+    {
+        let mut overlay_active = use_signal(|| false);
+        let on_submit = use_callback(
+            move |paths: HashSet<PathBuf>| {
+                on_submit.call((file_engine, paths));
+                overlay_active.set(false);
             },
-        }
+        );
+        let on_click = move |event| {
+            overlay_active.set(true);
+        };
+        return rsx! {
+            div { onclick: on_click,
+                {children}
+            }
+            if *overlay_active.read() {
+                Overlay {
+                    file_picker::FilePicker { multiple, on_submit }
+                }
+            }
+        };
     }
 }

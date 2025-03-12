@@ -17,10 +17,9 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         FilePickerLauncher {
             desktop_native: false,
-            desktop_windowed: true,
+            desktop_windowed: false,
             multiple: false,
-            // directory: true,
-            on_submit: move |(file_engine, paths): (Arc<dyn FileEngine>, HashSet<PathBuf>)| {
+            on_submit: move |paths: HashSet<PathBuf>| {
                 debug_assert!(paths.len() == 1);
                 let path = paths.iter().next().unwrap();
                 dioxus::logger::tracing::error!("Selected file: {:?}", path);

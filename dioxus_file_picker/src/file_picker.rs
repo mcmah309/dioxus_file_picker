@@ -1,27 +1,36 @@
 use std::{
     collections::HashSet,
     env, fs, mem,
-    path::{Path, PathBuf}, sync::Arc,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
-use dioxus::{
-    html::FileEngine, logger::tracing::error, prelude::*
-};
+use dioxus::{html::FileEngine, logger::tracing::error, prelude::*};
 
 /// A file picker component that works on desktop and mobile.
 #[component]
-pub(crate) fn CrossPlatformFilePicker(multiple: bool, on_submit: Callback<(Arc<dyn FileEngine>, HashSet<PathBuf>), ()>) -> Element {
-    let mut explorer = use_signal(FilesExplorerState::new);
+pub(crate) fn FilePicker(
+    multiple: bool,
+    open_at: Option<PathBuf>,
+    on_submit: Callback<HashSet<PathBuf>, ()>,
+) -> Element {
+    let mut explorer = use_signal(|| match open_at {
+        Some(path) => FilesExplorerState::init_at(path),
+        None => FilesExplorerState::new(),
+    });
     let reader = explorer.read();
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("/assets/tailwind.css") }
-        document::Link { rel: "stylesheet", href: asset!("/assets/integrated_file_picker.css") }
+        document::Link {
+            rel: "stylesheet",
+            href: asset!("/assets/integrated_file_picker.css"),
+        }
         document::Link {
             href: "https://fonts.googleapis.com/icon?family=Material+Icons",
             rel: "stylesheet",
         }
         // File Explorer
-        div { class: "flex flex-col h-full",
+        div { class: "flex flex-col h-full bg-white",
             // File Explorer header
             div { class: "flex items-center flex-row ",
                 if reader.can_go_back() {
@@ -152,7 +161,7 @@ pub(crate) fn CrossPlatformFilePicker(multiple: bool, on_submit: Callback<(Arc<d
                             let mut writer = explorer.write();
                             let selection = mem::take(&mut writer.selection);
                             writer.is_selecting = false;
-                            // on_submit.call(selection);
+                            on_submit.call(selection);
                         },
                         "Submit"
                     }
