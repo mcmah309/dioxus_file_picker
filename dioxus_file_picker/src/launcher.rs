@@ -162,10 +162,9 @@ pub fn FilePickerLauncher(
         };
         return rsx! {
             div { onclick: on_click, {children} }
-            if *overlay_active.read() {
-                Overlay {
-                    file_picker::FilePicker { multiple, on_submit }
-                }
+            Overlay {
+                active: overlay_active,
+                file_picker::FilePicker { multiple, on_submit }
             }
         };
     }
@@ -191,10 +190,9 @@ pub fn FilePickerLauncher(
         };
         return rsx! {
             div { onclick: on_click, {children} }
-            if *overlay_active.read() {
-                Overlay {
-                    file_picker::FilePicker { multiple, on_submit }
-                }
+            Overlay {
+                active: overlay_active,
+                file_picker::FilePicker { multiple, on_submit }
             }
         };
     }
