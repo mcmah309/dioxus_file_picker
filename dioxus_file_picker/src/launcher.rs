@@ -2,11 +2,17 @@ use std::{
     collections::HashSet,
     env,
     path::PathBuf,
+    rc::Weak,
     sync::Arc,
     time::{self},
 };
 
-use dioxus::{html::FileEngine, logger::tracing::warn, prelude::*};
+use dioxus::{
+    desktop::{DesktopContext, DesktopService},
+    html::FileEngine,
+    logger::tracing::warn,
+    prelude::*,
+};
 #[cfg(any(
     target_os = "windows",
     target_os = "macos",
@@ -90,14 +96,38 @@ pub fn FilePickerLauncher(
     ))]
     {
         let mut overlay_active = use_signal(|| false);
+        let mut current_opened_window: Signal<Option<Weak<DesktopService>>> = use_signal(|| None);
+        fn close_window(window_signal: &mut Signal<Option<Weak<DesktopService>>>) {
+            if let Some(window) = window_signal.write().take().and_then(|e| e.upgrade()) {
+                window.close();
+            }
+        }
         let on_submit = use_callback(move |paths: HashSet<PathBuf>| {
             on_submit.call(paths);
             overlay_active.set(false);
+            close_window(&mut current_opened_window);
         });
         let on_click = move |_event| {
+            fn create_dioxus_window(
+                multiple: bool,
+                on_submit: Callback<HashSet<PathBuf>, ()>,
+                window_signal: &mut Signal<Option<Weak<DesktopService>>>,
+            ) {
+                let dom = VirtualDom::new_with_props(
+                    file_picker::FilePicker,
+                    file_picker::FilePickerProps {
+                        multiple,
+                        open_at: None,
+                        on_submit,
+                    },
+                );
+                let window = dioxus::desktop::window().new_window(dom, Default::default());
+                window_signal.set(Some(window));
+            }
             let path_clone = open_at.clone();
             let path = path_clone
                 .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
+            close_window(&mut current_opened_window);
             if desktop_native {
                 let start_time = time::Instant::now();
                 let files;
@@ -120,36 +150,18 @@ pub fn FilePickerLauncher(
                     warn!(
                         "Native file dialog closed too quickly. This was likely an error. Launching a dioxus file dialog instead"
                     );
-                    let dom = VirtualDom::new_with_props(
-                        file_picker::FilePicker,
-                        file_picker::FilePickerProps {
-                            multiple,
-                            open_at: None,
-                            on_submit,
-                        },
-                    );
-                    dioxus::desktop::window().new_window(dom, Default::default());
+                    create_dioxus_window(multiple, on_submit, &mut current_opened_window);
                 } else {
                     on_submit.call(files.into_iter().collect());
                 }
             } else if desktop_windowed {
-                let dom = VirtualDom::new_with_props(
-                    file_picker::FilePicker,
-                    file_picker::FilePickerProps {
-                        multiple,
-                        open_at: None,
-                        on_submit,
-                    },
-                );
-                dioxus::desktop::window().new_window(dom, Default::default());
+                create_dioxus_window(multiple, on_submit, &mut current_opened_window);
             } else {
                 overlay_active.set(true);
             }
         };
         return rsx! {
-            div { onclick: on_click,
-                {children}
-            }
+            div { onclick: on_click, {children} }
             if *overlay_active.read() {
                 Overlay {
                     file_picker::FilePicker { multiple, on_submit }
@@ -170,19 +182,15 @@ pub fn FilePickerLauncher(
     )))]
     {
         let mut overlay_active = use_signal(|| false);
-        let on_submit = use_callback(
-            move |paths: HashSet<PathBuf>| {
-                on_submit.call((file_engine, paths));
-                overlay_active.set(false);
-            },
-        );
+        let on_submit = use_callback(move |paths: HashSet<PathBuf>| {
+            on_submit.call((file_engine, paths));
+            overlay_active.set(false);
+        });
         let on_click = move |event| {
             overlay_active.set(true);
         };
         return rsx! {
-            div { onclick: on_click,
-                {children}
-            }
+            div { onclick: on_click, {children} }
             if *overlay_active.read() {
                 Overlay {
                     file_picker::FilePicker { multiple, on_submit }

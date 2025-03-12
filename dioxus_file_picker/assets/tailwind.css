@@ -524,6 +524,9 @@
   .fixed {
     position: fixed;
   }
+  .static {
+    position: static;
+  }
   .flex {
     display: flex;
   }
