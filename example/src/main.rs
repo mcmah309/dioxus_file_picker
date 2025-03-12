@@ -7,6 +7,7 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
     dioxus::logger::init(Level::ERROR).expect("Failed to initialize logger");
+    tracing_log::LogTracer::builder().init().expect("Failed to initialize log tracer");
     dioxus::launch(App);
 }
 
@@ -16,7 +17,7 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         FilePickerLauncher {
             desktop_native: false,
-            desktop_windowed: false,
+            desktop_windowed: true,
             multiple: false,
             // directory: true,
             on_submit: move |(file_engine, paths): (Arc<dyn FileEngine>, HashSet<PathBuf>)| {
