@@ -110,13 +110,14 @@ pub fn FilePickerLauncher(
             fn create_dioxus_window(
                 multiple: bool,
                 on_submit: Callback<VirtualPaths, ()>,
+                open_at: Option<PathBuf>,
                 window_signal: &mut Signal<Option<Weak<DesktopService>>>,
             ) {
                 let dom = VirtualDom::new_with_props(
                     file_picker::FilePicker,
                     file_picker::FilePickerProps {
                         multiple,
-                        open_at: None,
+                        open_at,
                         on_submit,
                     },
                 );
@@ -149,12 +150,17 @@ pub fn FilePickerLauncher(
                     warn!(
                         "Native file dialog closed too quickly. This was likely an error. Launching a dioxus file dialog instead"
                     );
-                    create_dioxus_window(multiple, on_submit, &mut current_opened_window);
+                    create_dioxus_window(
+                        multiple,
+                        on_submit,
+                        Some(path),
+                        &mut current_opened_window,
+                    );
                 } else {
                     on_submit.call(VirtualPaths::native(files.into_iter().collect()));
                 }
             } else if desktop_windowed {
-                create_dioxus_window(multiple, on_submit, &mut current_opened_window);
+                create_dioxus_window(multiple, on_submit, Some(path), &mut current_opened_window);
             } else {
                 overlay_active.set(true);
             }
