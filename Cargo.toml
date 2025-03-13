@@ -1,5 +1,6 @@
 [workspace]
 members = ["dioxus_file_picker", "example"]
+resolver = "3"
 
 [profile]
 
