@@ -3,8 +3,6 @@ use std::{collections::HashSet, path::PathBuf};
 use dioxus::{logger::tracing::Level, prelude::*};
 use dioxus_file_picker::FilePickerLauncher;
 
-const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
-
 fn main() {
     dioxus::logger::init(Level::ERROR).expect("Failed to initialize logger");
     tracing_log::LogTracer::builder()
@@ -16,7 +14,6 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
-        document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         FilePickerLauncher {
             desktop_native: false,
             desktop_windowed: false,
