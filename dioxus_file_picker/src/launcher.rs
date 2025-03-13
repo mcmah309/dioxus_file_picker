@@ -7,11 +7,6 @@ use std::{
     time::{self},
 };
 
-use dioxus::{
-    html::FileEngine,
-    logger::tracing::warn,
-    prelude::*,
-};
 #[cfg(any(
     target_os = "windows",
     target_os = "macos",
@@ -21,21 +16,15 @@ use dioxus::{
     target_os = "netbsd",
     target_os = "openbsd"
 ))]
-use dioxus::desktop::{DesktopContext, DesktopService};
-#[cfg(any(
-    target_os = "windows",
-    target_os = "macos",
-    target_os = "linux",
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "netbsd",
-    target_os = "openbsd"
-))]
-use rfd::FileDialog;
+use dioxus::desktop::DesktopService;
+use dioxus::{html::FileEngine, logger::tracing::warn, prelude::*};
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Blob, File};
 
-use crate::{Overlay, file_picker};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::file_picker;
+
+use crate::{Overlay, VirtualPaths};
 
 #[component]
 pub fn FilePickerLauncher(
@@ -51,13 +40,16 @@ pub fn FilePickerLauncher(
     // directory: bool, // todo
     /// File extensions to accept
     // accept: Vec<String>, // todo
+    /// If true, can select directories. This has no effect on web and if `desktop_native` is true.
+    // can_accept_directories: bool, // todo
     /// The callback to call when a file(s) is selected and submitted. If `multiple` is false, the set may be empty or
     /// contain one.
-    on_submit: Callback<HashSet<PathBuf>, ()>,
+    on_submit: Callback<VirtualPaths, ()>,
     /// The path to open the file picker at. If null, defaults to current directory. Has no effect on web.
     open_at: Option<PathBuf>,
     children: Element,
 ) -> Element {
+    // Web
     #[cfg(target_arch = "wasm32")]
     {
         let id = uuid::Uuid::now_v7().to_string();
@@ -70,12 +62,7 @@ pub fn FilePickerLauncher(
                 onchange: move |event: Event<FormData>| {
                     event.prevent_default();
                     if let Some(file_engine) = &event.files() {
-                        let file_names = file_engine.files();
-                        let mut paths = HashSet::new();
-                        for file_name in file_names {
-                            paths.insert(PathBuf::from(file_name));
-                        }
-                        on_submit.call(paths);
+                        on_submit.call(VirtualPaths::web(file_engine.clone()));
                     }
                 },
             }
@@ -96,6 +83,7 @@ pub fn FilePickerLauncher(
             }
         }
     }
+    // Desktop
     #[cfg(any(
         target_os = "windows",
         target_os = "macos",
@@ -113,7 +101,7 @@ pub fn FilePickerLauncher(
                 window.close();
             }
         }
-        let on_submit = use_callback(move |paths: HashSet<PathBuf>| {
+        let on_submit = use_callback(move |paths: VirtualPaths| {
             on_submit.call(paths);
             overlay_active.set(false);
             close_window(&mut current_opened_window);
@@ -121,7 +109,7 @@ pub fn FilePickerLauncher(
         let on_click = move |_event| {
             fn create_dioxus_window(
                 multiple: bool,
-                on_submit: Callback<HashSet<PathBuf>, ()>,
+                on_submit: Callback<VirtualPaths, ()>,
                 window_signal: &mut Signal<Option<Weak<DesktopService>>>,
             ) {
                 let dom = VirtualDom::new_with_props(
@@ -163,7 +151,7 @@ pub fn FilePickerLauncher(
                     );
                     create_dioxus_window(multiple, on_submit, &mut current_opened_window);
                 } else {
-                    on_submit.call(files.into_iter().collect());
+                    on_submit.call(VirtualPaths::native(files.into_iter().collect()));
                 }
             } else if desktop_windowed {
                 create_dioxus_window(multiple, on_submit, &mut current_opened_window);
@@ -173,12 +161,14 @@ pub fn FilePickerLauncher(
         };
         return rsx! {
             div { onclick: on_click, {children} }
-            Overlay {
-                active: overlay_active,
-                file_picker::FilePicker { multiple, on_submit }
+            if !(desktop_native || desktop_windowed) {
+                Overlay { active: overlay_active,
+                    file_picker::FilePicker { multiple, on_submit }
+                }
             }
         };
     }
+    // Mobile/fallback
     #[cfg(not(any(
         target_arch = "wasm32",
         //
@@ -192,17 +182,16 @@ pub fn FilePickerLauncher(
     )))]
     {
         let mut overlay_active = use_signal(|| false);
-        let on_submit = use_callback(move |paths: HashSet<PathBuf>| {
+        let on_submit = use_callback(move |paths: VirtualPaths| {
             on_submit.call(paths);
             overlay_active.set(false);
         });
-        let on_click = move |event| {
+        let on_click = move |_event| {
             overlay_active.set(true);
         };
         return rsx! {
             div { onclick: on_click, {children} }
-            Overlay {
-                active: overlay_active,
+            Overlay { active: overlay_active,
                 file_picker::FilePicker { multiple, on_submit }
             }
         };

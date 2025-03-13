@@ -24,3 +24,6 @@ rfd = { version = "0.15", default-features = false, features = [
     "xdg-portal",
     "tokio",
 ] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1", features = ["fs"] }

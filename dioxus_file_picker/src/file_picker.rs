@@ -2,17 +2,18 @@ use std::{
     collections::HashSet,
     env, fs, mem,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
-use dioxus::{html::FileEngine, logger::tracing::error, prelude::*};
+use dioxus::{logger::tracing::error, prelude::*};
+
+use crate::VirtualPaths;
 
 /// A file picker component that works on desktop and mobile.
 #[component]
 pub(crate) fn FilePicker(
     multiple: bool,
     open_at: Option<PathBuf>,
-    on_submit: Callback<HashSet<PathBuf>, ()>,
+    on_submit: Callback<VirtualPaths, ()>,
 ) -> Element {
     let mut explorer = use_signal(|| match open_at {
         Some(path) => FilesExplorerState::init_at(path),
@@ -161,7 +162,7 @@ pub(crate) fn FilePicker(
                             let mut writer = explorer.write();
                             let selection = mem::take(&mut writer.selection);
                             writer.is_selecting = false;
-                            on_submit.call(selection);
+                            on_submit.call(VirtualPaths::native(selection));
                         },
                         "Submit"
                     }

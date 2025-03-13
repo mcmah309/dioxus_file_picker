@@ -1204,6 +1204,7 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "rfd 0.15.2",
+ "tokio",
  "uuid",
  "web-sys",
 ]
