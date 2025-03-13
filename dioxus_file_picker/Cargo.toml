@@ -9,8 +9,7 @@ license = "Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dioxus = { version = "0.6", features = ["router"] }
-# exact_format = "0.2"
+dioxus = { version = "0.6", features = [] }
 
 [features]
 default = []
@@ -20,7 +19,7 @@ web-sys = "0.3"
 uuid = { version = "1", features = ["v7", "js"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd"))'.dependencies]
-dioxus = { version = "0.6", features = ["router", "desktop"] }
+dioxus = { version = "0.6", features = ["desktop"] }
 rfd = { version = "0.15", default-features = false, features = [
     "xdg-portal",
     "tokio",

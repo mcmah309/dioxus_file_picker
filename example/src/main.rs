@@ -1,13 +1,15 @@
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use std::{collections::HashSet, path::PathBuf};
 
-use dioxus::{html::FileEngine, logger::tracing::Level, prelude::*};
+use dioxus::{logger::tracing::Level, prelude::*};
 use dioxus_file_picker::FilePickerLauncher;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
     dioxus::logger::init(Level::ERROR).expect("Failed to initialize logger");
-    tracing_log::LogTracer::builder().init().expect("Failed to initialize log tracer");
+    tracing_log::LogTracer::builder()
+        .init()
+        .expect("Failed to initialize log tracer");
     dioxus::launch(App);
 }
 
@@ -21,8 +23,11 @@ fn App() -> Element {
             multiple: false,
             on_submit: move |paths: HashSet<PathBuf>| {
                 debug_assert!(paths.len() == 1);
-                let path = paths.iter().next().unwrap();
-                dioxus::logger::tracing::error!("Selected file: {:?}", path);
+                if let Some(path) = paths.into_iter().next() {
+                    dioxus::logger::tracing::error!("Selected file: {:?}", path);
+                } else {
+                    dioxus::logger::tracing::error!("No file selected");
+                }
             },
             "click me"
         }

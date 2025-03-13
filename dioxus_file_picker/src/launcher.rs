@@ -8,11 +8,20 @@ use std::{
 };
 
 use dioxus::{
-    desktop::{DesktopContext, DesktopService},
     html::FileEngine,
     logger::tracing::warn,
     prelude::*,
 };
+#[cfg(any(
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
+))]
+use dioxus::desktop::{DesktopContext, DesktopService};
 #[cfg(any(
     target_os = "windows",
     target_os = "macos",
@@ -42,6 +51,8 @@ pub fn FilePickerLauncher(
     // directory: bool, // todo
     /// File extensions to accept
     // accept: Vec<String>, // todo
+    /// The callback to call when a file(s) is selected and submitted. If `multiple` is false, the set may be empty or
+    /// contain one.
     on_submit: Callback<HashSet<PathBuf>, ()>,
     /// The path to open the file picker at. If null, defaults to current directory. Has no effect on web.
     open_at: Option<PathBuf>,
@@ -182,7 +193,7 @@ pub fn FilePickerLauncher(
     {
         let mut overlay_active = use_signal(|| false);
         let on_submit = use_callback(move |paths: HashSet<PathBuf>| {
-            on_submit.call((file_engine, paths));
+            on_submit.call(paths);
             overlay_active.set(false);
         });
         let on_click = move |event| {
