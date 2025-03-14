@@ -121,7 +121,11 @@ pub fn FilePickerLauncher(
                         on_submit,
                     },
                 );
-                let window = dioxus::desktop::window().new_window(dom, Default::default());
+                let window = dioxus::desktop::window().new_window(
+                    dom,
+                    dioxus::desktop::Config::new().with_menu(None),
+                    // .with_window(dioxus::desktop::WindowBuilder::new().with_decorations(false)),
+                );
                 window_signal.set(Some(window));
             }
             let path_clone = open_at.clone();
