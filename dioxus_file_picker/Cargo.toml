@@ -19,7 +19,7 @@ web-sys = "0.3"
 uuid = { version = "1", features = ["v7", "js"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd"))'.dependencies]
-dioxus = { version = "0.6", features = ["desktop"] }
+dioxus = { version = "0.7.0-alpha.2", features = ["desktop"] } # todo change to 0.7 when release and use dioxus-lib instead when https://github.com/DioxusLabs/dioxus/issues/4338 closes
 rfd = { version = "0.15", default-features = false, features = [
     "xdg-portal",
     "tokio",
