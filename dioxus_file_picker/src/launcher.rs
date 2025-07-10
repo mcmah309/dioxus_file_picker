@@ -2,7 +2,7 @@ use std::{
     collections::HashSet,
     env,
     path::PathBuf,
-    rc::Weak,
+    rc::Rc,
     sync::Arc,
     time::{self},
 };
@@ -95,9 +95,9 @@ pub fn FilePickerLauncher(
     ))]
     {
         let mut overlay_active = use_signal(|| false);
-        let mut current_opened_window: Signal<Option<Weak<DesktopService>>> = use_signal(|| None);
-        fn close_window(window_signal: &mut Signal<Option<Weak<DesktopService>>>) {
-            if let Some(window) = window_signal.write().take().and_then(|e| e.upgrade()) {
+        let mut current_opened_window: Signal<Option<Rc<DesktopService>>> = use_signal(|| None);
+        fn close_window(window_signal: &mut Signal<Option<Rc<DesktopService>>>) {
+            if let Some(window) = window_signal.write().take() {
                 window.close();
             }
         }
@@ -107,53 +107,68 @@ pub fn FilePickerLauncher(
             close_window(&mut current_opened_window);
         });
         let on_click = move |_event| {
-            fn create_dioxus_window(
-                multiple: bool,
-                on_submit: Callback<VirtualPaths, ()>,
-                open_at: Option<PathBuf>,
-                window_signal: &mut Signal<Option<Weak<DesktopService>>>,
-            ) {
-                let dom = VirtualDom::new_with_props(
-                    file_picker::FilePicker,
-                    file_picker::FilePickerProps {
-                        multiple,
-                        open_at,
-                        on_submit,
-                    },
-                );
-                let window = dioxus::desktop::window().new_window(
-                    dom,
-                    dioxus::desktop::Config::new().with_menu(None),
-                    // .with_window(dioxus::desktop::WindowBuilder::new().with_decorations(false)),
-                );
-                window_signal.set(Some(window));
-            }
-            let path_clone = open_at.clone();
-            let path = path_clone
-                .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
-            close_window(&mut current_opened_window);
-            if desktop_native {
-                let start_time = time::Instant::now();
-                let files;
-                if multiple {
-                    files = rfd::FileDialog::new()
-                        .set_directory(&path)
-                        .pick_files()
-                        .unwrap_or(Vec::new())
-                } else {
-                    files = rfd::FileDialog::new()
-                        .set_directory(&path)
-                        .pick_file()
-                        .map(|e| vec![e])
-                        .unwrap_or(Vec::new());
-                }
-                let elapsed = start_time.elapsed();
-                let within_one_second = elapsed <= time::Duration::from_secs(1);
-                if within_one_second {
-                    debug_assert!(files.is_empty());
-                    warn!(
-                        "Native file dialog closed too quickly. This was likely an error. Launching a dioxus file dialog instead"
+            let open_at = open_at.clone();
+            async move {
+                async fn create_dioxus_window(
+                    multiple: bool,
+                    on_submit: Callback<VirtualPaths, ()>,
+                    open_at: Option<PathBuf>,
+                    window_signal: &mut Signal<Option<Rc<DesktopService>>>,
+                ) {
+                    let dom = VirtualDom::new_with_props(
+                        file_picker::FilePicker,
+                        file_picker::FilePickerProps {
+                            multiple,
+                            open_at,
+                            on_submit,
+                        },
                     );
+                    let window = dioxus::desktop::window()
+                        .new_window(
+                            dom,
+                            dioxus::desktop::Config::new().with_menu(None),
+                            // .with_window(dioxus::desktop::WindowBuilder::new().with_decorations(false)),
+                        )
+                        .await;
+                    window_signal.set(Some(window));
+                }
+                let path = open_at.unwrap_or_else(|| {
+                    env::current_dir().expect("Failed to get current directory")
+                });
+                close_window(&mut current_opened_window);
+                if desktop_native {
+                    let start_time = time::Instant::now();
+                    let files;
+                    if multiple {
+                        files = rfd::FileDialog::new()
+                            .set_directory(&path)
+                            .pick_files()
+                            .unwrap_or(Vec::new())
+                    } else {
+                        files = rfd::FileDialog::new()
+                            .set_directory(&path)
+                            .pick_file()
+                            .map(|e| vec![e])
+                            .unwrap_or(Vec::new());
+                    }
+                    let elapsed = start_time.elapsed();
+                    let within_one_second = elapsed <= time::Duration::from_secs(1);
+                    if within_one_second {
+                        debug_assert!(files.is_empty());
+                        warn!(
+                            "Native file dialog closed too quickly. This was likely an error. Launching a dioxus file dialog instead"
+                        );
+                        create_dioxus_window(
+                            multiple,
+                            on_submit,
+                            Some(path),
+                            &mut current_opened_window,
+                        )
+                        .await;
+                    } else {
+                        on_submit.call(VirtualPaths::native(files.into_iter().collect()));
+                    }
+                } else if desktop_windowed {
                     create_dioxus_window(
                         multiple,
                         on_submit,
@@ -161,12 +176,8 @@ pub fn FilePickerLauncher(
                         &mut current_opened_window,
                     );
                 } else {
-                    on_submit.call(VirtualPaths::native(files.into_iter().collect()));
+                    overlay_active.set(true);
                 }
-            } else if desktop_windowed {
-                create_dioxus_window(multiple, on_submit, Some(path), &mut current_opened_window);
-            } else {
-                overlay_active.set(true);
             }
         };
         return rsx! {
